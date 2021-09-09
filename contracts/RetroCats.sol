@@ -58,8 +58,8 @@ contract RetroCats is Initializable, OwnableUpgradeable, ERC721URIStorageUpgrade
     */
 
     // Events
-    event requestedNewChainlinkVRF(bytes32 indexed requestId, uint256 indexed tokenId);
-    event requestedKeeperRNG(uint256 tokenId);
+    event requestedNewChainlinkVRF(bytes32 indexed requestId);
+    event requestedNewCat(uint256 tokenId);
     event randomNumberAssigned(uint256 indexed tokenId, uint256 indexed randomNumber);
 
     /**
@@ -81,6 +81,7 @@ contract RetroCats is Initializable, OwnableUpgradeable, ERC721URIStorageUpgrade
         s_vrfCallInterval = 15;
         s_retroCatsMetadata = _retroCatsMetadata;
         s_chainlinkKeeperRegistryContract = _chainlinkKeeperRegistryContract;
+        s_baseURI = "https://us-central1-retro-cats.cloudfunctions.net/retro-cats-function?token_id=";
     }
 
     /**
@@ -98,10 +99,11 @@ contract RetroCats is Initializable, OwnableUpgradeable, ERC721URIStorageUpgrade
         if(s_tokenCounter % s_vrfCallInterval == 0){
             bytes32 requestId = requestRandomness(s_keyHash, s_fee);
             s_requestIdToTokenId[requestId] = tokenId;
-            emit requestedNewChainlinkVRF(requestId, tokenId);
+            emit requestedNewCat(tokenId);
+            emit requestedNewChainlinkVRF(requestId);
         } else { 
             s_tokenIdRandomnessNeededQueue.push(tokenId);
-            emit requestedKeeperRNG(tokenId);
+            emit requestedNewCat(tokenId);
         }
         s_tokenCounter = s_tokenCounter + 1;
     }
@@ -153,6 +155,8 @@ contract RetroCats is Initializable, OwnableUpgradeable, ERC721URIStorageUpgrade
         s_tokenIdRandomnessNeededQueue.pop();
     }
 
+
+    // Only the Chainlink keeper registery should be able to call this contract
     modifier onlyChainlinkKeepers() {
         require(msg.sender == s_chainlinkKeeperRegistryContract, "RetroCats: Caller is not a Chainlink Node!");
         _;

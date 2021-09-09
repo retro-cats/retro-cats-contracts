@@ -12,7 +12,7 @@ from scripts.helpful_scripts import (
     fund_with_link,
     LOCAL_BLOCKCHAIN_ENVIRONMENTS,
 )
-from scripts.deploy_retrocats import deploy_retro_cats, deploy_retro_cats_metadata
+from scripts.deploy_retrocats import deploy_retro_cats
 import pytest
 
 STATIC_RANDOMNESS = 777
@@ -49,6 +49,7 @@ def test_fee_set_properly():
         pytest.skip("Only for local testing")
     retro_cats = deploy_retro_cats()
     assert retro_cats.s_fee() == config["networks"][network.show_active()]["fee"]
+    assert retro_cats.s_vrfCallInterval() == 15
 
 
 def test_need_link_to_mint():
@@ -76,7 +77,7 @@ def test_mint_first_cat():
     tx.wait(1)
     requested_tx = retro_cats.mint_cat({"from": account})
     requested_tx.wait(1)
-    assert requested_tx.events["requestedNewChainlinkVRF"]["tokenId"] == 0
+    assert requested_tx.events["requestedNewCat"]["tokenId"] == 0
     assert requested_tx.events["requestedNewChainlinkVRF"]["requestId"] is not None
     return retro_cats, requested_tx
 
@@ -109,7 +110,7 @@ def test_mint_second_cat():
     tx.wait(1)
     requested_tx = retro_cats.mint_cat({"from": account})
     requested_tx.wait(1)
-    assert requested_tx.events["requestedKeeperRNG"]["tokenId"] == 1
+    assert requested_tx.events["requestedNewCat"]["tokenId"] == 1
     assert retro_cats.checkUpkeep.call("")[0] is True
     assert retro_cats.s_tokenIdRandomnessNeededQueue(0) == 1
     return retro_cats
@@ -123,9 +124,11 @@ def test_keepers_performing_upkeep():
     retro_cats = test_mint_second_cat()
     upkeep_tx = retro_cats.performUpkeep("", {"from": account})
     upkeep_tx.wait(1)
+    print(upkeep_tx.gas_used)
     with pytest.raises(exceptions.VirtualMachineError):
         retro_cats.s_tokenIdRandomnessNeededQueue(0)
     assert upkeep_tx.events["randomNumberAssigned"]["tokenId"] == 1
+    assert retro_cats.checkUpkeep.call("")[0] is False
 
 
 def test_only_keepers_can_upkeep():
@@ -148,5 +151,5 @@ def test_chainlink_vrf_called_at_intervals():
     assert retro_cats.s_tokenCounter() == 15
     requested_tx = retro_cats.mint_cat({"from": account})
     requested_tx.wait(1)
-    assert requested_tx.events["requestedNewChainlinkVRF"]["tokenId"] == 15
+    assert requested_tx.events["requestedNewCat"]["tokenId"] == 15
     assert requested_tx.events["requestedNewChainlinkVRF"]["requestId"] is not None

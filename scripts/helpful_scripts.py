@@ -122,6 +122,7 @@ def upgrade(
     newimplementation_address,
     proxy_admin_contract=None,
     initializer=None,
+    encoded_initializer=None,
     *args,
 ):
     transaction = None
@@ -134,6 +135,13 @@ def upgrade(
                 encoded_function_call,
                 {"from": account},
             )
+        elif encoded_initializer:
+            transaction = proxy_admin_contract.upgradeAndCall(
+                proxy.address,
+                newimplementation_address,
+                encoded_initializer,
+                {"from": account},
+            )
         else:
             transaction = proxy_admin_contract.upgrade(
                 proxy.address, newimplementation_address, {"from": account}
@@ -143,6 +151,10 @@ def upgrade(
             encoded_function_call = encode_function_data(initializer, *args)
             transaction = proxy.upgradeToAndCall(
                 newimplementation_address, encoded_function_call, {"from": account}
+            )
+        elif encoded_initializer:
+            transaction = proxy.upgradeToAndCall(
+                newimplementation_address, encoded_initializer, {"from": account}
             )
         else:
             transaction = proxy.upgradeTo(newimplementation_address, {"from": account})

@@ -75,10 +75,11 @@ contract RetroCatsMetadata {
     string public purr = "Meow!";
 
     function rngToCat(uint256 randomNumber) public view returns (RetroCat memory retroCat){
+    // function rngToCat(uint256 randomNumber) public view returns (uint256){
         uint256[][] memory traitArrays = S_TRAIT_ARRAYS;
         uint256[] memory traitIndexes = new uint256[](s_totalTraits);
         for (uint i = 0; i < s_totalTraits; i++){
-            uint256 traitIndex = getTraitIndex(traitArrays[i], uint256(keccak256(abi.encode(randomNumber, i))));
+            uint256 traitIndex = getTraitIndex(traitArrays[i], getModdedRNG(randomNumber, i));
             traitIndexes[i] = traitIndex;
         }
         // retroCat = RetroCat(Background(traitIndexes[0]),Frame(1),Breed(1),Eyes(1),Hair(1),Bling(1),Head(1),Item(1),Ring(1),Earring(1),Vice(1));
@@ -97,12 +98,18 @@ contract RetroCatsMetadata {
         });
     }
 
-    function getTraitIndex(uint256[] memory traitArray, uint256 randomNumber) public view returns(uint256){
-        uint256 modded_rng = randomNumber % s_maxChanceValue;
+    function getModdedRNG(uint256 randomNumber, uint256 seed) public view returns(uint256 modded_rng){
+        uint256 newRng = uint256(keccak256(abi.encode(randomNumber, seed)));
+        modded_rng = newRng % s_maxChanceValue;
+    }
+
+    function getTraitIndex(uint256[] memory traitArray, uint256 moddedRNG) public pure returns(uint256){
+        uint256 cumulativeSum = 0;
         for(uint i =0; i<traitArray.length; i++){
-            if(modded_rng > traitArray[i] && modded_rng < traitArray[i + 1]){
+            if(moddedRNG >= cumulativeSum && moddedRNG < cumulativeSum + traitArray[i]){
                 return i;
             }
+            cumulativeSum = cumulativeSum + traitArray[i];
         }
         revert("Got a value outside of the s_maxChanceValue");
     }

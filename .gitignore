@@ -1,0 +1,6 @@
+.pytest_cache
+build
+reports
+yarn.lock
+.notes.md
+node_modules

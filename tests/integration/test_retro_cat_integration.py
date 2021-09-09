@@ -1,7 +1,6 @@
 from brownie import (
     network,
     Contract,
-    RetroCatsMetadata,
     TransparentUpgradeableProxy,
     RetroCats,
 )
@@ -34,7 +33,7 @@ def test_minting_first_and_second_cat_and_waiting():
     assert retro_cats.s_tokenIdToRandomNumber(0) == 0
     requested_tx = retro_cats.mint_cat({"from": account})
     requested_tx.wait(1)
-    assert requested_tx.events["requestedNewChainlinkVRF"]["tokenId"] == 0
+    assert requested_tx.events["requestedNewCat"]["tokenId"] == 0
     assert requested_tx.events["requestedNewChainlinkVRF"]["requestId"] is not None
 
     # Wait for Chainlink VRF to respond
@@ -51,10 +50,19 @@ def test_minting_first_and_second_cat_and_waiting():
 def test_keepers_part():
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for integration testing")
-    retro_cats_metadata = RetroCatsMetadata[-1]
-    retro_cats = RetroCats[-1]
+    retro_cats = Contract.from_abi(
+        "RetroCats", TransparentUpgradeableProxy[-1], RetroCats.abi
+    )
     account = get_account()
     tx = fund_with_link(retro_cats.address)
     tx.wait(1)
-    assert retro_cat.s_tokenCounter() % retro_cat.s_vrfCallInterval() != 0
-    retro_cats.mint_cat({"from": account})
+    tx = retro_cats.mint_cat({"from": account})
+    tx.wait(1)
+    assert retro_cats.s_tokenCounter() % retro_cats.s_vrfCallInterval() != 0
+    tx_minting = retro_cats.mint_cat({"from": account})
+    tx_minting.wait(1)
+    tokenId = tx_minting.events["requestedKeeperRNG"]["tokenId"]
+    assert tokenId > 0
+    # Make sure keepers has an upkeep and is funded with LINK
+    time.sleep(180)
+    assert retro_cats.s_tokenIdToRandomNumber(tokenId) > 0
