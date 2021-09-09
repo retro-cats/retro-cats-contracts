@@ -133,6 +133,22 @@ def test_mint_second_cat():
     return retro_cats
 
 
+def test_can_withdraw_link():
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    account = get_account()
+    retro_cats = test_mint_second_cat()
+    link_balance = get_contract("link_token").balanceOf(retro_cats)
+    starting_account_link_balance = get_contract("link_token").balanceOf(account)
+    tx = retro_cats.withdrawLink({"from": account})
+    tx.wait(1)
+    assert get_contract("link_token").balanceOf(retro_cats) == 0
+    assert (
+        get_contract("link_token").balanceOf(account)
+        == link_balance + starting_account_link_balance
+    )
+
+
 def test_owner_can_withdraw():
     retro_cats = test_mint_second_cat()
     account = get_account()

@@ -200,6 +200,11 @@ contract RetroCats is Initializable, OwnableUpgradeable, ERC721URIStorageUpgrade
         payable(owner()).transfer(amount);
     }
 
+    function withdrawLink() public onlyOwner {
+        LinkTokenInterface linkToken = LinkTokenInterface(LINK);
+        require(linkToken.transfer(msg.sender, linkToken.balanceOf(address(this))), "Unable to transfer");
+    }
+
     function tokenURI(uint256 tokenId)
         public
         view
