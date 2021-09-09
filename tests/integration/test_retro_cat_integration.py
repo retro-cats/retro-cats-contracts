@@ -31,7 +31,8 @@ def test_minting_first_and_second_cat_and_waiting():
     tx = fund_with_link(retro_cats.address)
     tx.wait(1)
     assert retro_cats.s_tokenIdToRandomNumber(0) == 0
-    requested_tx = retro_cats.mint_cat({"from": account})
+    cat_price = retro_cats.s_catfee()
+    requested_tx = retro_cats.mint_cat({"from": account, "value": cat_price})
     requested_tx.wait(1)
     assert requested_tx.events["requestedNewCat"]["tokenId"] == 0
     assert requested_tx.events["requestedNewChainlinkVRF"]["requestId"] is not None
@@ -56,10 +57,11 @@ def test_keepers_part():
     account = get_account()
     tx = fund_with_link(retro_cats.address)
     tx.wait(1)
-    tx = retro_cats.mint_cat({"from": account})
+    cat_price = retro_cats.s_catfee()
+    tx = retro_cats.mint_cat({"from": account, "value": cat_price})
     tx.wait(1)
     assert retro_cats.s_tokenCounter() % retro_cats.s_vrfCallInterval() != 0
-    tx_minting = retro_cats.mint_cat({"from": account})
+    tx_minting = retro_cats.mint_cat({"from": account, "value": cat_price})
     tx_minting.wait(1)
     tokenId = tx_minting.events["requestedKeeperRNG"]["tokenId"]
     assert tokenId > 0

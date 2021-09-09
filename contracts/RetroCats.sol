@@ -51,6 +51,7 @@ contract RetroCats is Initializable, OwnableUpgradeable, ERC721URIStorageUpgrade
     uint256 public s_vrfCallInterval;
     uint256[] public s_tokenIdRandomnessNeededQueue;
     address public s_retroCatsMetadata;
+    uint256 public s_catfee;
     /**
     * @dev Every X cats minted will trigger a new random
     * number from the chainlink VRF. That X number, is this
@@ -82,6 +83,7 @@ contract RetroCats is Initializable, OwnableUpgradeable, ERC721URIStorageUpgrade
         s_retroCatsMetadata = _retroCatsMetadata;
         s_chainlinkKeeperRegistryContract = _chainlinkKeeperRegistryContract;
         s_baseURI = "https://us-central1-retro-cats.cloudfunctions.net/retro-cats-function?token_id=";
+        s_catfee = 20000000000000000;
     }
 
     /**
@@ -93,6 +95,7 @@ contract RetroCats is Initializable, OwnableUpgradeable, ERC721URIStorageUpgrade
     * Chainlink VRF calls, but we still want true randomness. 
     */
     function mint_cat() public payable nonReentrant returns (uint256 tokenId){
+        require(msg.value >= s_catfee, "You must pay the cat fee!");
         tokenId = s_tokenCounter;
         _safeMint(msg.sender, tokenId);
 
@@ -186,6 +189,15 @@ contract RetroCats is Initializable, OwnableUpgradeable, ERC721URIStorageUpgrade
 
     function _setRetroCatMetadata(address _retroCatMetadata) public onlyOwner(){
         s_retroCatsMetadata = _retroCatMetadata;
+    }
+
+    function setCatFee(uint256 _catfee) public onlyOwner {
+        s_catfee = _catfee;
+    }
+
+    function withdraw() public onlyOwner{
+        uint256 amount = address(this).balance;
+        payable(owner()).transfer(amount);
     }
 
     function tokenURI(uint256 tokenId)

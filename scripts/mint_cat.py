@@ -14,7 +14,9 @@ def mint_cat():
     proxy_retro_cats = Contract.from_abi("RetroCats", proxy.address, RetroCats.abi)
     tx = fund_with_link(proxy_retro_cats)
     tx.wait(1)
-    tx = proxy_retro_cats.mint_cat({"from": account})
+    tx = proxy_retro_cats.mint_cat(
+        {"from": account, "value": proxy_retro_cats.s_catfee()}
+    )
     # print(f"{proxy_retro_cats.s_fee()}")
     tx.wait(1)
     token_id = tx.events["requestedNewCat"]["tokenId"]
