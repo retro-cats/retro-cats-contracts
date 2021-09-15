@@ -6,6 +6,7 @@ from scripts.helpful_scripts import get_account
 
 
 def set_interval():
+    # for rinkeby
     account = get_account()
     retro_cats = RetroCats[-1]
     tx = retro_cats._setBaseURI(

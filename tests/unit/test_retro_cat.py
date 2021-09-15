@@ -41,8 +41,9 @@ def test_need_link_to_mint():
         index=1
     )  # Remeber, the admin is the proxy contract so we can do this
     retro_cats = deploy_retro_cats()
+    amount_of_cats = 1
     with pytest.raises(exceptions.VirtualMachineError):
-        receipt = retro_cats.mint_cat({"from": account})
+        receipt = retro_cats.mint_cat(amount_of_cats, {"from": account})
         receipt.wait(1)
 
 
@@ -56,8 +57,9 @@ def test_need_eth_to_mint():
     retro_cats = deploy_retro_cats()
     tx = fund_with_link(retro_cats)
     tx.wait(1)
+    amount_of_cats = 1
     with pytest.raises(exceptions.VirtualMachineError):
-        requested_tx = retro_cats.mint_cat({"from": account})
+        requested_tx = retro_cats.mint_cat(amount_of_cats, {"from": account})
         requested_tx.wait(1)
 
 
@@ -72,7 +74,10 @@ def test_mint_first_cat():
     tx = fund_with_link(retro_cats)
     tx.wait(1)
     cat_price = retro_cats.s_catfee()
-    requested_tx = retro_cats.mint_cat({"from": account, "value": cat_price})
+    amount_of_cats = 1
+    requested_tx = retro_cats.mint_cat(
+        amount_of_cats, {"from": account, "value": cat_price}
+    )
     requested_tx.wait(1)
     assert requested_tx.events["requestedNewCat"]["tokenId"] == 0
     assert requested_tx.events["requestedNewChainlinkVRF"]["requestId"] is not None
@@ -106,11 +111,45 @@ def test_mint_second_cat():
     tx = fund_with_link(retro_cats)
     tx.wait(1)
     cat_price = retro_cats.s_catfee()
-    requested_tx = retro_cats.mint_cat({"from": account, "value": cat_price})
+    amount_of_cats = 1
+    requested_tx = retro_cats.mint_cat(
+        amount_of_cats, {"from": account, "value": cat_price}
+    )
     requested_tx.wait(1)
     assert requested_tx.events["requestedNewCat"]["tokenId"] == 1
     assert retro_cats.checkUpkeep.call("")[0] is True
     assert retro_cats.s_tokenIdRandomnessNeededQueue(0) == 1
+    return retro_cats
+
+
+def test_mint_many_cats():
+    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
+        pytest.skip("Only for local testing")
+    # Should call the Chainlink VRF
+    # And checkupkeep should be true
+    account = get_account()
+    retro_cats, _ = test_mint_first_cat()
+    with pytest.raises(exceptions.VirtualMachineError):
+        retro_cats.s_tokenIdRandomnessNeededQueue(0)
+    tx = fund_with_link(retro_cats)
+    tx.wait(1)
+    cat_price = retro_cats.s_catfee()
+    with pytest.raises(exceptions.VirtualMachineError):
+        # This test too many cats minted at once
+        amount_of_cats = 15
+        requested_tx = retro_cats.mint_cat(
+            amount_of_cats, {"from": account, "value": cat_price}
+        )
+    amount_of_cats = 9
+    requested_tx = retro_cats.mint_cat(
+        amount_of_cats, {"from": account, "value": cat_price * amount_of_cats}
+    )
+    requested_tx.wait(1)
+    assert requested_tx.events["requestedNewCat"][0]["tokenId"] == 1
+    assert (
+        requested_tx.events["requestedNewCat"][amount_of_cats - 1]["tokenId"]
+        == amount_of_cats
+    )
     return retro_cats
 
 
@@ -174,11 +213,17 @@ def test_chainlink_vrf_called_at_intervals():
     account = get_account(index=1)  # Account is also the keeper by default
     retro_cats = test_mint_second_cat()  # tokenCounter is now at 2
     cat_price = retro_cats.s_catfee()
+    amount_of_cats = 1
     for x in range(13):
-        requested_tx = retro_cats.mint_cat({"from": account, "value": cat_price})
+        requested_tx = retro_cats.mint_cat(
+            amount_of_cats, {"from": account, "value": cat_price}
+        )
         requested_tx.wait(1)
     assert retro_cats.s_tokenCounter() == 15
-    requested_tx = retro_cats.mint_cat({"from": account, "value": cat_price})
+    amount_of_cats = 1
+    requested_tx = retro_cats.mint_cat(
+        amount_of_cats, {"from": account, "value": cat_price}
+    )
     requested_tx.wait(1)
     assert requested_tx.events["requestedNewCat"]["tokenId"] == 15
     assert requested_tx.events["requestedNewChainlinkVRF"]["requestId"] is not None

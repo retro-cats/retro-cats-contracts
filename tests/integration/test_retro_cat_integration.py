@@ -54,10 +54,14 @@ def test_keepers_part():
     tx = fund_with_link(retro_cats.address)
     tx.wait(1)
     cat_price = retro_cats.s_catfee()
-    tx = retro_cats.mint_cat({"from": account, "value": cat_price})
+    amount_of_cats = 1
+    tx = retro_cats.mint_cat(amount_of_cats, {"from": account, "value": cat_price})
     tx.wait(1)
     assert retro_cats.s_tokenCounter() % retro_cats.s_vrfCallInterval() != 0
-    tx_minting = retro_cats.mint_cat({"from": account, "value": cat_price})
+    amount_of_cats = 1
+    tx_minting = retro_cats.mint_cat(
+        amount_of_cats, {"from": account, "value": cat_price}
+    )
     tx_minting.wait(1)
     tokenId = tx_minting.events["requestedKeeperRNG"]["tokenId"]
     assert tokenId > 0

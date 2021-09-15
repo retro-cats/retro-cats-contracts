@@ -6,15 +6,20 @@ from brownie import (
 from scripts.helpful_scripts import get_account, fund_with_link, get_contract
 import time
 
+AMOUNT_OF_CATS = 6
+
 
 def mint_cat():
     account = get_account()
     retro_cats = RetroCats[-1]
     link_token = get_contract("link_token")
-    if link_token.balanceOf(retro_cats) < 1000000000000000000:
+    if link_token.balanceOf(retro_cats) < 1500000000000000000:
         tx = fund_with_link(retro_cats)
         tx.wait(1)
-    tx = retro_cats.mint_cat({"from": account, "value": retro_cats.s_catfee()})
+    tx = retro_cats.mint_cat(
+        AMOUNT_OF_CATS,
+        {"from": account, "value": retro_cats.s_catfee() * AMOUNT_OF_CATS},
+    )
     # print(f"{proxy_retro_cats.s_fee()}")
     tx.wait(1)
     token_id = tx.events["requestedNewCat"]["tokenId"]

@@ -52,6 +52,7 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     uint256[] public s_tokenIdRandomnessNeededQueue;
     address public s_retroCatsMetadata;
     uint256 public s_catfee;
+    uint256 public s_maxCatMint;
     /**
     * @dev Every X cats minted will trigger a new random
     * number from the chainlink VRF. That X number, is this
@@ -82,6 +83,7 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
         s_chainlinkKeeperRegistryContract = _chainlinkKeeperRegistryContract;
         s_baseURI = "https://us-central1-retro-cats.cloudfunctions.net/retro-cats-function?token_id=";
         s_catfee = 20000000000000000;
+        s_maxCatMint = 10;
     }
 
     /**
@@ -92,21 +94,23 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     * We do this as a cost saving mechanism. Since keepers is cheaper than 
     * Chainlink VRF calls, but we still want true randomness. 
     */
-    function mint_cat() public payable nonReentrant returns (uint256 tokenId){
-        require(msg.value >= s_catfee, "You must pay the cat fee!");
-        tokenId = s_tokenCounter;
-        _safeMint(msg.sender, tokenId);
-
-        if(s_tokenCounter % s_vrfCallInterval == 0){
-            bytes32 requestId = requestRandomness(s_keyHash, s_fee);
-            s_requestIdToTokenId[requestId] = tokenId;
-            emit requestedNewCat(tokenId);
-            emit requestedNewChainlinkVRF(requestId);
-        } else { 
-            s_tokenIdRandomnessNeededQueue.push(tokenId);
-            emit requestedNewCat(tokenId);
+    function mint_cat(uint256 _amount) public payable nonReentrant returns (uint256 tokenId){
+        require(msg.value >= s_catfee * _amount, "You must pay the cat fee!");
+        require(s_maxCatMint >= _amount, "You can't mint more than the max amount of cats at once!");
+        for(uint256 i = 0; i < _amount; i++){
+            tokenId = s_tokenCounter;
+            _safeMint(msg.sender, tokenId);
+            if(s_tokenCounter % s_vrfCallInterval == 0){
+                bytes32 requestId = requestRandomness(s_keyHash, s_fee);
+                s_requestIdToTokenId[requestId] = tokenId;
+                emit requestedNewCat(tokenId);
+                emit requestedNewChainlinkVRF(requestId);
+            } else { 
+                s_tokenIdRandomnessNeededQueue.push(tokenId);
+                emit requestedNewCat(tokenId);
+            }
+            s_tokenCounter = s_tokenCounter + 1;
         }
-        s_tokenCounter = s_tokenCounter + 1;
     }
 
     function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
