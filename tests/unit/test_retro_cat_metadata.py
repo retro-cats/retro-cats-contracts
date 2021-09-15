@@ -11,10 +11,10 @@ def test_rng_to_cat():
         pytest.skip("Only for local testing")
     retro_cats_metadata = deploy_retro_cats_metadata()
     cat = retro_cats_metadata.rngToCat(STATIC_RANDOMNESS)
-    assert cat == (2, 10, 7, 6, 8, 0, 6, 8, 4, 10, 5)
+    assert cat == (1, 10, 8, 6, 16, 0, 8, 9, 5, 10, 6)
 
 
-def test_creating_cats_dont_revert():
+def test_creating_cat_images_doesnt_revert():
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for local testing")
     retro_cats_metadata = deploy_retro_cats_metadata()

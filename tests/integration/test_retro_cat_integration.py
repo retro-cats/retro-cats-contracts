@@ -1,8 +1,6 @@
 from brownie import (
     network,
-    Contract,
-    TransparentUpgradeableProxy,
-    RetroCats,
+    exceptions,
 )
 from scripts.deploy_retrocats import deploy_retro_cats_metadata, deploy_retro_cats
 from scripts.helpful_scripts import (
@@ -51,9 +49,7 @@ def test_minting_first_and_second_cat_and_waiting():
 def test_keepers_part():
     if network.show_active() in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for integration testing")
-    retro_cats = Contract.from_abi(
-        "RetroCats", TransparentUpgradeableProxy[-1], RetroCats.abi
-    )
+    retro_cats = deploy_retro_cats()
     account = get_account()
     tx = fund_with_link(retro_cats.address)
     tx.wait(1)
@@ -68,3 +64,5 @@ def test_keepers_part():
     # Make sure keepers has an upkeep and is funded with LINK
     time.sleep(180)
     assert retro_cats.s_tokenIdToRandomNumber(tokenId) > 0
+    with pytest.raises(exceptions.VirtualMachineError):
+        retro_cats.performUpkeep("", {"from": account})

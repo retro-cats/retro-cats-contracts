@@ -18,25 +18,6 @@ import pytest
 STATIC_RANDOMNESS = 777
 
 
-def test_initializer_called_only_once():  # Arrange
-    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
-        pytest.skip("Only for local testing")
-    account = get_account()
-    retro_cats = deploy_retro_cats()
-    with pytest.raises(exceptions.VirtualMachineError):
-        retro_cats.initialize(
-            get_contract("vrf_coordinator").address,
-            get_contract("link_token").address,
-            config["networks"][network.show_active()]["keyhash"],
-            config["networks"][network.show_active()]["fee"],
-            RetroCatsMetadata[-1].address,
-            config["networks"][network.show_active()].get(
-                "keeper_registry", account.address
-            ),
-            {"from": account},
-        )
-
-
 def test_owner_set_properly():
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for local testing")

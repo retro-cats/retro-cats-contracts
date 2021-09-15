@@ -19,15 +19,15 @@
 
 pragma solidity 0.8.3;
 
-import "@openzeppelin-upgradeable/contracts/token/ERC721/extensions/ERC721URIStorageUpgradeable.sol";
-import "@openzeppelin-upgradeable/contracts/access/OwnableUpgradeable.sol";
-import "@openzeppelin-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin-upgradeable/contracts/utils/StringsUpgradeable.sol";
-import "./chainlink/VRFConsumerBaseUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 import "../interfaces/KeeperCompatibleInterface.sol";
 
-contract RetroCats is Initializable, OwnableUpgradeable, ERC721URIStorageUpgradeable, VRFConsumerBaseUpgradeable, ReentrancyGuardUpgradeable, KeeperCompatibleInterface{
-    using StringsUpgradeable for uint256;
+contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuard, KeeperCompatibleInterface{
+    using Strings for uint256;
     
     // ERC721 Variables
     uint256 public s_tokenCounter;
@@ -70,16 +70,14 @@ contract RetroCats is Initializable, OwnableUpgradeable, ERC721URIStorageUpgrade
     * the number returned is truly random. 
     * @param _linkToken The address of the Chainlink token
     */
-    function initialize(address _vrfCoordinator, address _linkToken, bytes32 _keyHash, uint256 _fee, address _retroCatsMetadata, address _chainlinkKeeperRegistryContract) initializer public
+    constructor (address _vrfCoordinator, address _linkToken, bytes32 _keyHash, uint256 _fee, address _retroCatsMetadata, address _chainlinkKeeperRegistryContract, uint256 _vrfCallInterval) public
+    VRFConsumerBase(_vrfCoordinator, _linkToken)
+    ERC721("Retro Cats", "RETRO")
     {
-        __VRFConsumerBase_init(_vrfCoordinator, _linkToken);
-        __ERC721_init_unchained("Retro Cats", "RETRO");
-        __Ownable_init_unchained();
-        __ReentrancyGuard_init_unchained();
         s_tokenCounter = 0;
         s_keyHash = _keyHash;
         s_fee = _fee;
-        s_vrfCallInterval = 15;
+        s_vrfCallInterval = _vrfCallInterval;
         s_retroCatsMetadata = _retroCatsMetadata;
         s_chainlinkKeeperRegistryContract = _chainlinkKeeperRegistryContract;
         s_baseURI = "https://us-central1-retro-cats.cloudfunctions.net/retro-cats-function?token_id=";
@@ -149,6 +147,7 @@ contract RetroCats is Initializable, OwnableUpgradeable, ERC721URIStorageUpgrade
         removeFromQueue(tokenQueueIndex);
     }
 
+    // refactor for gas please
     function removeFromQueue(uint256 index) internal {
         if (index >= s_tokenIdRandomnessNeededQueue.length) return;
 
