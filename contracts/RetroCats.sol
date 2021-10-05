@@ -36,7 +36,6 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     // Chainlink VRF Variables
     bytes32 internal s_keyHash;
     uint256 public s_fee;
-    uint256 internal s_recentRandomNumber;
     mapping(bytes32 => uint256) internal s_requestIdToStartingTokenId;
     mapping(bytes32 => uint256) internal s_requestIdToAmount;
     mapping(uint256 => uint256) public s_tokenIdToRandomNumber;
@@ -49,7 +48,6 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     * number from the chainlink VRF. That X number, is this
     * variable.
     */
-    uint256 public s_vrfCallInterval;
     uint256[] public s_tokenIdRandomnessNeededQueue;
     address public s_retroCatsMetadata;
     uint256 public s_catfee;
@@ -78,7 +76,6 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
         s_tokenCounter = 0;
         s_keyHash = _keyHash;
         s_fee = _fee;
-        s_vrfCallInterval = _vrfCallInterval;
         s_retroCatsMetadata = _retroCatsMetadata;
         s_chainlinkKeeperRegistryContract = _chainlinkKeeperRegistryContract;
         s_baseURI = "https://us-central1-retro-cats.cloudfunctions.net/retro-cats-function?token_id=";
@@ -88,16 +85,13 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
 
     /**
     * @notice Mints a new random cat
-    * @dev We only trigger a chainlink VRF call every s_vrfCallInterval mints.
-    * Otherwise, we will have the Chainlink Keeper Network create our 
-    * random number, so others can't exploit searching for randomness.
-    * We do this as a cost saving mechanism. Since keepers is cheaper than 
-    * Chainlink VRF calls, but we still want true randomness. 
+    * We use Chainlink VRF
     */
     function mint_cat(uint256 _amount) public payable nonReentrant returns (uint256 tokenId){
         require(msg.value >= s_catfee * _amount, "You must pay the cat fee!");
         require(s_maxCatMint >= _amount, "You can't mint more than the max amount of cats at once!");
         require(_amount > 0, "Uh.... Mint at least 1 please");
+        require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK in contract");
         for(uint256 i = 0; i < _amount; i++){
             tokenId = s_tokenCounter;
             _safeMint(msg.sender, tokenId);
@@ -110,7 +104,6 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     }
 
     function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
-        s_recentRandomNumber = randomness;
         uint256 tokenId = s_requestIdToStartingTokenId[requestId];
         uint256 amount = s_requestIdToAmount[requestId];
         for (uint256 i = tokenId; i < tokenId + amount; i++){
@@ -123,10 +116,6 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
         return uint256(keccak256(abi.encode(randomValue, n)));
     }
 
-
-    function setVRFCallInterval(uint256 newInterval) public onlyOwner {
-        s_vrfCallInterval = newInterval;
-    }
 
     /**
     * @notice Checks to see if their are any tokenIds that don't have 
