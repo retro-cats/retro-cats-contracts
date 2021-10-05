@@ -32,10 +32,6 @@ def deploy_retro_cats(retro_cats_metadata=None):
         config["networks"][network.show_active()]["keyhash"],
         config["networks"][network.show_active()]["fee"],
         RetroCatsMetadata[-1].address,
-        config["networks"][network.show_active()].get(
-            "keeper_registry", account.address
-        ),
-        config["networks"][network.show_active()]["vrf_call_interval"],
         {"from": account},
         # publish_source=config["networks"][network.show_active()].get("verify", False),
     )

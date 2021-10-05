@@ -26,7 +26,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 import "../interfaces/KeeperCompatibleInterface.sol";
 
-contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuard, KeeperCompatibleInterface{
+contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuard{
     using Strings for uint256;
     
     // ERC721 Variables
@@ -39,9 +39,6 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     mapping(bytes32 => uint256) internal s_requestIdToStartingTokenId;
     mapping(bytes32 => uint256) internal s_requestIdToAmount;
     mapping(uint256 => uint256) public s_tokenIdToRandomNumber;
-
-    // Chainlink Keeper Variables
-    address public s_chainlinkKeeperRegistryContract;
     // Retro Cat Randomness Variables
     /**
     * @dev Every X cats minted will trigger a new random
@@ -69,7 +66,7 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     * the number returned is truly random. 
     * @param _linkToken The address of the Chainlink token
     */
-    constructor (address _vrfCoordinator, address _linkToken, bytes32 _keyHash, uint256 _fee, address _retroCatsMetadata, address _chainlinkKeeperRegistryContract, uint256 _vrfCallInterval) 
+    constructor (address _vrfCoordinator, address _linkToken, bytes32 _keyHash, uint256 _fee, address _retroCatsMetadata) 
     VRFConsumerBase(_vrfCoordinator, _linkToken)
     ERC721("Retro Cats", "RETRO")
     {
@@ -77,7 +74,6 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
         s_keyHash = _keyHash;
         s_fee = _fee;
         s_retroCatsMetadata = _retroCatsMetadata;
-        s_chainlinkKeeperRegistryContract = _chainlinkKeeperRegistryContract;
         s_baseURI = "https://us-central1-retro-cats.cloudfunctions.net/retro-cats-function?token_id=";
         s_catfee = 20000000000000000;
         s_maxCatMint = 10;
@@ -91,7 +87,7 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
         require(msg.value >= s_catfee * _amount, "You must pay the cat fee!");
         require(s_maxCatMint >= _amount, "You can't mint more than the max amount of cats at once!");
         require(_amount > 0, "Uh.... Mint at least 1 please");
-        require(LINK.balanceOf(address(this)) >= fee, "Not enough LINK in contract");
+        require(LINK.balanceOf(address(this)) >= s_fee, "Not enough LINK in contract");
         for(uint256 i = 0; i < _amount; i++){
             tokenId = s_tokenCounter;
             _safeMint(msg.sender, tokenId);
@@ -114,20 +110,6 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
 
     function expandedRandomness(uint256 randomValue, uint256 n) public pure returns (uint256) {
         return uint256(keccak256(abi.encode(randomValue, n)));
-    }
-
-
-    /**
-    * @notice Checks to see if their are any tokenIds that don't have 
-    * a random number & tokenURI associated with them
-    * @param checkData should be empty, needed for keeper network
-    */
-
-
-    // Only the Chainlink keeper registery should be able to call this contract
-    modifier onlyChainlinkKeepers() {
-        require(msg.sender == s_chainlinkKeeperRegistryContract, "RetroCats: Caller is not a Chainlink Node!");
-        _;
     }
 
     function setTokenURI(uint256 tokenId, string memory _tokenURI) public onlyOwner {
@@ -186,7 +168,7 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
         s_keyHash = _newKeyHash;
     }
 
-    function setFee(bytes32 _newFee) public onlyOwner nonReentrant {
+    function setFee(uint256 _newFee) public onlyOwner nonReentrant {
         s_fee = _newFee;
     }
 

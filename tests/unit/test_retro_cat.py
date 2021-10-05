@@ -30,7 +30,6 @@ def test_fee_set_properly():
         pytest.skip("Only for local testing")
     retro_cats = deploy_retro_cats()
     assert retro_cats.s_fee() == config["networks"][network.show_active()]["fee"]
-    assert retro_cats.s_vrfCallInterval() == 15
 
 
 def test_need_link_to_mint():
@@ -80,7 +79,6 @@ def test_mint_first_cat():
     )
     requested_tx.wait(1)
     assert requested_tx.events["requestedNewCat"]["tokenId"] == 0
-    assert requested_tx.events["requestedNewChainlinkVRF"]["requestId"] is not None
     return retro_cats, requested_tx
 
 
@@ -91,7 +89,7 @@ def test_chainlink_vrf_fulfillment():
     retro_cats, requested_tx = test_mint_first_cat()
     mock_chainlink_vrf = VRFCoordinatorMock[-1]
     vrf_tx = mock_chainlink_vrf.callBackWithRandomness(
-        requested_tx.events["requestedNewChainlinkVRF"]["requestId"],
+        requested_tx.events["requestedNewCat"]["requestId"],
         STATIC_RANDOMNESS,
         retro_cats.address,
         {"from": account},
@@ -106,8 +104,6 @@ def test_mint_second_cat():
     # And checkupkeep should be true
     account = get_account()
     retro_cats, _ = test_mint_first_cat()
-    with pytest.raises(exceptions.VirtualMachineError):
-        retro_cats.s_tokenIdRandomnessNeededQueue(0)
     tx = fund_with_link(retro_cats)
     tx.wait(1)
     cat_price = retro_cats.s_catfee()
@@ -117,8 +113,6 @@ def test_mint_second_cat():
     )
     requested_tx.wait(1)
     assert requested_tx.events["requestedNewCat"]["tokenId"] == 1
-    assert retro_cats.checkUpkeep.call("")[0] is True
-    assert retro_cats.s_tokenIdRandomnessNeededQueue(0) == 1
     return retro_cats
 
 
@@ -126,11 +120,8 @@ def test_mint_many_cats():
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for local testing")
     # Should call the Chainlink VRF
-    # And checkupkeep should be true
     account = get_account()
     retro_cats, _ = test_mint_first_cat()
-    with pytest.raises(exceptions.VirtualMachineError):
-        retro_cats.s_tokenIdRandomnessNeededQueue(0)
     tx = fund_with_link(retro_cats)
     tx.wait(1)
     cat_price = retro_cats.s_catfee()
@@ -181,49 +172,3 @@ def test_owner_can_withdraw():
     tx.wait(1)
     assert account.balance() == starting_balance + retro_cats.s_catfee() * 2
     assert retro_cats.balance() == 0
-
-
-def test_keepers_performing_upkeep():
-    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
-        pytest.skip("Only for local testing")
-    # And checkupkeep should be true
-    account = get_account()  # Account is also the keeper by default
-    retro_cats = test_mint_second_cat()
-    upkeep_tx = retro_cats.performUpkeep("", {"from": account})
-    upkeep_tx.wait(1)
-    print(upkeep_tx.gas_used)
-    with pytest.raises(exceptions.VirtualMachineError):
-        retro_cats.s_tokenIdRandomnessNeededQueue(0)
-    assert upkeep_tx.events["randomNumberAssigned"]["tokenId"] == 1
-    assert retro_cats.checkUpkeep.call("")[0] is False
-
-
-def test_only_keepers_can_upkeep():
-    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
-        pytest.skip("Only for local testing")
-    account = get_account(index=1)  # Account is also the keeper by default
-    retro_cats = test_mint_second_cat()
-    with pytest.raises(exceptions.VirtualMachineError):
-        retro_cats.performUpkeep("", {"from": account})
-
-
-def test_chainlink_vrf_called_at_intervals():
-    if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
-        pytest.skip("Only for local testing")
-    account = get_account(index=1)  # Account is also the keeper by default
-    retro_cats = test_mint_second_cat()  # tokenCounter is now at 2
-    cat_price = retro_cats.s_catfee()
-    amount_of_cats = 1
-    for x in range(13):
-        requested_tx = retro_cats.mint_cat(
-            amount_of_cats, {"from": account, "value": cat_price}
-        )
-        requested_tx.wait(1)
-    assert retro_cats.s_tokenCounter() == 15
-    amount_of_cats = 1
-    requested_tx = retro_cats.mint_cat(
-        amount_of_cats, {"from": account, "value": cat_price}
-    )
-    requested_tx.wait(1)
-    assert requested_tx.events["requestedNewCat"]["tokenId"] == 15
-    assert requested_tx.events["requestedNewChainlinkVRF"]["requestId"] is not None
