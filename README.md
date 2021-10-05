@@ -58,10 +58,6 @@ Everything should pass.
 
 At the end of the day, this is an NFT project. What it does, is randomize an assortment of PNG images hosted in the cloud (centralized at the moment, I know, I'll get to that). It uses Chainlink VRF to assign a random set of traits when a user calls the `mint_cat` function. 
 
-However, with the mainnet fee of Chainlink VRF being 2 LINK per call, we are also working with keepers to mint the cats using a pseudo-randomness function. Every x mints, we use Chainlink VRF as a new random seed, and then we use keepers. As the project scales, we can eventually change this threshold to 1 so Chainlink VRF is always called on cat mint. 
-
-We also have this contract upgradeable using the [transparent proxy pattern.](https://blog.openzeppelin.com/the-transparent-proxy-pattern/) We want unlimited flexibility in the direction of the project, so we have setup the contracts with a proxy and made them upgradeable.
-
 I'm still working on verification, some of the verification in brownie broke recently :/
 
 Right now, each tokenId is assigned some random number that will be the "DNA" of what the cat looks like. We use the RetroCatsMetadata to get the "cat values" that map to an image in the google cloud function associated with a trait. 
