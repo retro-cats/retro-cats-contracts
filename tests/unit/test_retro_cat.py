@@ -1,7 +1,6 @@
 from brownie import (
     config,
     network,
-    RetroCatsMetadata,
     exceptions,
     VRFCoordinatorMock,
 )
@@ -42,7 +41,7 @@ def test_need_link_to_mint():
     retro_cats = deploy_retro_cats()
     amount_of_cats = 1
     with pytest.raises(exceptions.VirtualMachineError):
-        receipt = retro_cats.mint_cat(amount_of_cats, {"from": account})
+        receipt = retro_cats.mint_cats(amount_of_cats, {"from": account})
         receipt.wait(1)
 
 
@@ -58,7 +57,7 @@ def test_need_eth_to_mint():
     tx.wait(1)
     amount_of_cats = 1
     with pytest.raises(exceptions.VirtualMachineError):
-        requested_tx = retro_cats.mint_cat(amount_of_cats, {"from": account})
+        requested_tx = retro_cats.mint_cats(amount_of_cats, {"from": account})
         requested_tx.wait(1)
 
 
@@ -74,7 +73,7 @@ def test_mint_first_cat():
     tx.wait(1)
     cat_price = retro_cats.s_catfee()
     amount_of_cats = 1
-    requested_tx = retro_cats.mint_cat(
+    requested_tx = retro_cats.mint_cats(
         amount_of_cats, {"from": account, "value": cat_price}
     )
     requested_tx.wait(1)
@@ -108,7 +107,7 @@ def test_mint_second_cat():
     tx.wait(1)
     cat_price = retro_cats.s_catfee()
     amount_of_cats = 1
-    requested_tx = retro_cats.mint_cat(
+    requested_tx = retro_cats.mint_cats(
         amount_of_cats, {"from": account, "value": cat_price}
     )
     requested_tx.wait(1)
@@ -128,11 +127,11 @@ def test_mint_many_cats():
     with pytest.raises(exceptions.VirtualMachineError):
         # This test too many cats minted at once
         amount_of_cats = 15
-        requested_tx = retro_cats.mint_cat(
+        requested_tx = retro_cats.mint_cats(
             amount_of_cats, {"from": account, "value": cat_price}
         )
     amount_of_cats = 9
-    requested_tx = retro_cats.mint_cat(
+    requested_tx = retro_cats.mint_cats(
         amount_of_cats, {"from": account, "value": cat_price * amount_of_cats}
     )
     requested_tx.wait(1)

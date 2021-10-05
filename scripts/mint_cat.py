@@ -9,14 +9,14 @@ import time
 AMOUNT_OF_CATS = 6
 
 
-def mint_cat():
+def mint_cats():
     account = get_account()
     retro_cats = RetroCats[-1]
     link_token = get_contract("link_token")
     if link_token.balanceOf(retro_cats) < 1500000000000000000:
         tx = fund_with_link(retro_cats)
         tx.wait(1)
-    tx = retro_cats.mint_cat(
+    tx = retro_cats.mint_cats(
         AMOUNT_OF_CATS,
         {"from": account, "value": retro_cats.s_catfee() * AMOUNT_OF_CATS},
     )
@@ -31,4 +31,4 @@ def mint_cat():
 
 
 def main():
-    mint_cat()
+    mint_cats()

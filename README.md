@@ -56,7 +56,7 @@ Everything should pass.
 
 # About
 
-At the end of the day, this is an NFT project. What it does, is randomize an assortment of PNG images hosted in the cloud (centralized at the moment, I know, I'll get to that). It uses Chainlink VRF to assign a random set of traits when a user calls the `mint_cat` function. 
+At the end of the day, this is an NFT project. What it does, is randomize an assortment of PNG images hosted in the cloud (centralized at the moment, I know, I'll get to that). It uses Chainlink VRF to assign a random set of traits when a user calls the `mint_cats` function. 
 
 I'm still working on verification, some of the verification in brownie broke recently :/
 

@@ -24,7 +24,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
-import "../interfaces/KeeperCompatibleInterface.sol";
 
 contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuard{
     using Strings for uint256;
@@ -40,20 +39,9 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     mapping(bytes32 => uint256) internal s_requestIdToAmount;
     mapping(uint256 => uint256) public s_tokenIdToRandomNumber;
     // Retro Cat Randomness Variables
-    /**
-    * @dev Every X cats minted will trigger a new random
-    * number from the chainlink VRF. That X number, is this
-    * variable.
-    */
-    uint256[] public s_tokenIdRandomnessNeededQueue;
     address public s_retroCatsMetadata;
     uint256 public s_catfee;
     uint256 public s_maxCatMint;
-    /**
-    * @dev Every X cats minted will trigger a new random
-    * number from the chainlink VRF. That X number, is this
-    * variable.
-    */
 
     // Events
     event requestedNewCat(uint256 indexed tokenId, bytes32 requestId);
@@ -81,9 +69,13 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
 
     /**
     * @notice Mints a new random cat
-    * We use Chainlink VRF
+    * We use Chainlink VRF to request a random number
+    * that random number is assigned to a cat, and is it's "dna"
+    * the `fulfillrandomness` function, is the function that does the assigning
+    * if they minted more than 1 cat, they will use the `expandedRandomness` function
+    * to mint more random numbers from the 1. 
     */
-    function mint_cat(uint256 _amount) public payable nonReentrant returns (uint256 tokenId){
+    function mint_cats(uint256 _amount) public payable nonReentrant returns (uint256 tokenId){
         require(msg.value >= s_catfee * _amount, "You must pay the cat fee!");
         require(s_maxCatMint >= _amount, "You can't mint more than the max amount of cats at once!");
         require(_amount > 0, "Uh.... Mint at least 1 please");
@@ -99,6 +91,9 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
         }
     }
 
+    /**
+     * @dev Base URI for computing {tokenURI}. 
+     */
     function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
         uint256 tokenId = s_requestIdToStartingTokenId[requestId];
         uint256 amount = s_requestIdToAmount[requestId];
@@ -108,10 +103,16 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
         }
     }
 
+    /**
+     * @dev Allows us to get many random numbers from just 1
+     */
     function expandedRandomness(uint256 randomValue, uint256 n) public pure returns (uint256) {
         return uint256(keccak256(abi.encode(randomValue, n)));
     }
 
+    /**
+     * @dev For if a user wants to immortalize their cat in IPFS
+     */
     function setTokenURI(uint256 tokenId, string memory _tokenURI) public onlyOwner {
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
@@ -128,30 +129,24 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     }
 
     /**
-     * @dev Sets the BaseURI for computing {tokenURI}. 
+     * @dev withdraw the ETH earned from the contract. 
      */
-    function _setBaseURI(string memory _newBaseURI) public onlyOwner(){
-        s_baseURI = _newBaseURI;
-    }
-
-    function _setRetroCatMetadata(address _retroCatMetadata) public onlyOwner(){
-        s_retroCatsMetadata = _retroCatMetadata;
-    }
-
-    function setCatFee(uint256 _catfee) public onlyOwner {
-        s_catfee = _catfee;
-    }
-
     function withdraw() public nonReentrant onlyOwner{
         uint256 amount = address(this).balance;
         (bool success, ) = payable(msg.sender).call{value: amount}("");
     }
 
+    /**
+     * @dev Withdraw the LINK from the contract. 
+     */
     function withdrawLink() public onlyOwner nonReentrant {
         LinkTokenInterface linkToken = LinkTokenInterface(LINK);
         require(linkToken.transfer(msg.sender, linkToken.balanceOf(address(this))), "Unable to transfer");
     }
 
+    /**
+     * @dev TokenURI for the NFTs.
+     */
     function tokenURI(uint256 tokenId)
         public
         view
@@ -162,6 +157,20 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
         string memory baseURI = _baseURI();
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
+    }
+
+    
+    // ********* setter functions **********
+    function _setBaseURI(string memory _newBaseURI) public onlyOwner(){
+        s_baseURI = _newBaseURI;
+    }
+
+    function _setRetroCatMetadata(address _retroCatMetadata) public onlyOwner(){
+        s_retroCatsMetadata = _retroCatMetadata;
+    }
+
+    function setCatFee(uint256 _catfee) public onlyOwner {
+        s_catfee = _catfee;
     }
 
     function setKeyHash(bytes32 _newKeyHash) public onlyOwner nonReentrant {
