@@ -3,17 +3,17 @@ import json
 import os
 import shutil
 
+FRONT_END_FOLDER = "../retro-cats-front-end-js/src/"
+
 
 def update_front_end():
     # Send the build folder
-    copy_folders_to_front_end("./build", "../retro-cats-front-end/src/chain-info")
+    copy_folders_to_front_end("./build", f"{FRONT_END_FOLDER}chain-info")
 
     # Sending the front end our config in JSON format
     with open("brownie-config.yaml", "r") as brownie_config:
         config_dict = yaml.load(brownie_config, Loader=yaml.FullLoader)
-        with open(
-            "../retro-cats-front-end/src/brownie-config.json", "w"
-        ) as brownie_config_json:
+        with open(f"{FRONT_END_FOLDER}brownie-config.json", "w") as brownie_config_json:
             json.dump(config_dict, brownie_config_json)
     print("Front end updated!")
 

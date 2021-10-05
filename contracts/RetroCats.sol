@@ -37,7 +37,8 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     bytes32 internal s_keyHash;
     uint256 public s_fee;
     uint256 internal s_recentRandomNumber;
-    mapping(bytes32 => uint256) internal s_requestIdToTokenId;
+    mapping(bytes32 => uint256) internal s_requestIdToStartingTokenId;
+    mapping(bytes32 => uint256) internal s_requestIdToAmount;
     mapping(uint256 => uint256) public s_tokenIdToRandomNumber;
 
     // Chainlink Keeper Variables
@@ -60,8 +61,7 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     */
 
     // Events
-    event requestedNewChainlinkVRF(bytes32 indexed requestId);
-    event requestedNewCat(uint256 tokenId);
+    event requestedNewCat(uint256 indexed tokenId, bytes32 requestId);
     event randomNumberAssigned(uint256 indexed tokenId, uint256 indexed randomNumber);
 
     /**
@@ -71,7 +71,7 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     * the number returned is truly random. 
     * @param _linkToken The address of the Chainlink token
     */
-    constructor (address _vrfCoordinator, address _linkToken, bytes32 _keyHash, uint256 _fee, address _retroCatsMetadata, address _chainlinkKeeperRegistryContract, uint256 _vrfCallInterval) public
+    constructor (address _vrfCoordinator, address _linkToken, bytes32 _keyHash, uint256 _fee, address _retroCatsMetadata, address _chainlinkKeeperRegistryContract, uint256 _vrfCallInterval) 
     VRFConsumerBase(_vrfCoordinator, _linkToken)
     ERC721("Retro Cats", "RETRO")
     {
@@ -97,28 +97,32 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     function mint_cat(uint256 _amount) public payable nonReentrant returns (uint256 tokenId){
         require(msg.value >= s_catfee * _amount, "You must pay the cat fee!");
         require(s_maxCatMint >= _amount, "You can't mint more than the max amount of cats at once!");
+        require(_amount > 0, "Uh.... Mint at least 1 please");
         for(uint256 i = 0; i < _amount; i++){
             tokenId = s_tokenCounter;
             _safeMint(msg.sender, tokenId);
-            if(s_tokenCounter % s_vrfCallInterval == 0){
-                bytes32 requestId = requestRandomness(s_keyHash, s_fee);
-                s_requestIdToTokenId[requestId] = tokenId;
-                emit requestedNewCat(tokenId);
-                emit requestedNewChainlinkVRF(requestId);
-            } else { 
-                s_tokenIdRandomnessNeededQueue.push(tokenId);
-                emit requestedNewCat(tokenId);
-            }
+            bytes32 requestId = requestRandomness(s_keyHash, s_fee);
+            s_requestIdToStartingTokenId[requestId] = tokenId;
+            s_requestIdToAmount[requestId] = _amount;
+            emit requestedNewCat(tokenId, requestId);
             s_tokenCounter = s_tokenCounter + 1;
         }
     }
 
     function fulfillRandomness(bytes32 requestId, uint256 randomness) internal override {
         s_recentRandomNumber = randomness;
-        uint256 tokenId = s_requestIdToTokenId[requestId];
-        s_tokenIdToRandomNumber[tokenId] = randomness;
-        emit randomNumberAssigned(tokenId, randomness);
+        uint256 tokenId = s_requestIdToStartingTokenId[requestId];
+        uint256 amount = s_requestIdToAmount[requestId];
+        for (uint256 i = tokenId; i < tokenId + amount; i++){
+            s_tokenIdToRandomNumber[i] = expandedRandomness(randomness, i);
+            emit randomNumberAssigned(i, s_tokenIdToRandomNumber[i]);
+        }
     }
+
+    function expandedRandomness(uint256 randomValue, uint256 n) public pure returns (uint256) {
+        return uint256(keccak256(abi.encode(randomValue, n)));
+    }
+
 
     function setVRFCallInterval(uint256 newInterval) public onlyOwner {
         s_vrfCallInterval = newInterval;
@@ -129,37 +133,6 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     * a random number & tokenURI associated with them
     * @param checkData should be empty, needed for keeper network
     */
-    function checkUpkeep(bytes calldata checkData) external override returns (bool upkeepNeeded, bytes memory performData){
-        upkeepNeeded = s_tokenIdRandomnessNeededQueue.length > 0;
-        performData = checkData;
-    }
-
-    function performUpkeep(bytes calldata performData) external override onlyChainlinkKeepers{
-        require(s_tokenIdRandomnessNeededQueue.length > 0, "RetroCats: There is nothing in queue!");
-        uint256 tokenQueueIndex = 0;
-        uint256 tokenId = s_tokenIdRandomnessNeededQueue[tokenQueueIndex];
-        // maybe we loop through a group of 10 (or 10 - tokenCounter % interval) 
-        // instead of just doing 1 at a time
-        // This might be an attack vector though
-        uint256 newRandomNumber = uint256(
-                keccak256(
-                    abi.encodePacked(block.difficulty, block.number, block.timestamp, tx.origin, tx.gasprice, tokenId)
-                )
-            );
-        s_tokenIdToRandomNumber[tokenId] = newRandomNumber;
-        emit randomNumberAssigned(tokenId, newRandomNumber);
-        removeFromQueue(tokenQueueIndex);
-    }
-
-    // refactor for gas please
-    function removeFromQueue(uint256 index) internal {
-        if (index >= s_tokenIdRandomnessNeededQueue.length) return;
-
-        for (uint i = index; i<s_tokenIdRandomnessNeededQueue.length-1; i++){
-            s_tokenIdRandomnessNeededQueue[i] = s_tokenIdRandomnessNeededQueue[i+1];
-        }
-        s_tokenIdRandomnessNeededQueue.pop();
-    }
 
 
     // Only the Chainlink keeper registery should be able to call this contract
@@ -186,8 +159,8 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     /**
      * @dev Sets the BaseURI for computing {tokenURI}. 
      */
-    function _setBaseURI(string memory _baseURI) public onlyOwner(){
-        s_baseURI = _baseURI;
+    function _setBaseURI(string memory _newBaseURI) public onlyOwner(){
+        s_baseURI = _newBaseURI;
     }
 
     function _setRetroCatMetadata(address _retroCatMetadata) public onlyOwner(){
@@ -198,12 +171,12 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
         s_catfee = _catfee;
     }
 
-    function withdraw() public onlyOwner{
+    function withdraw() public nonReentrant onlyOwner{
         uint256 amount = address(this).balance;
-        payable(owner()).transfer(amount);
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
     }
 
-    function withdrawLink() public onlyOwner {
+    function withdrawLink() public onlyOwner nonReentrant {
         LinkTokenInterface linkToken = LinkTokenInterface(LINK);
         require(linkToken.transfer(msg.sender, linkToken.balanceOf(address(this))), "Unable to transfer");
     }
@@ -218,5 +191,17 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
         string memory baseURI = _baseURI();
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
+    }
+
+    function setKeyHash(bytes32 _newKeyHash) public onlyOwner nonReentrant {
+        s_keyHash = _newKeyHash;
+    }
+
+    function setFee(bytes32 _newFee) public onlyOwner nonReentrant {
+        s_fee = _newFee;
+    }
+
+    function setMaxCatMint(uint256 _newMaxCatMint) public onlyOwner nonReentrant {
+        s_maxCatMint = _newMaxCatMint;
     }
 }

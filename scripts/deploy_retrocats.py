@@ -6,6 +6,8 @@ from brownie import (
     network,
 )
 from scripts.helpful_scripts import get_account, get_contract
+from scripts.set_base_uri import set_base_uri
+from scripts.update_front_end import update_front_end
 
 
 def deploy_retro_cats_metadata():
@@ -38,6 +40,9 @@ def deploy_retro_cats(retro_cats_metadata=None):
         # publish_source=config["networks"][network.show_active()].get("verify", False),
     )
     print(f"Here is our contract name: {retro_cats.name()}")
+    if network.show_active() == "rinkeby":
+        set_base_uri()
+        update_front_end()
     return retro_cats
 
 

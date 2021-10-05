@@ -5,7 +5,7 @@ from brownie import (
 from scripts.helpful_scripts import get_account
 
 
-def set_interval():
+def set_base_uri():
     # for rinkeby
     account = get_account()
     retro_cats = RetroCats[-1]
@@ -17,4 +17,4 @@ def set_interval():
 
 
 def main():
-    set_interval()
+    set_base_uri()
