@@ -18,7 +18,7 @@ def mint_cats():
         tx.wait(1)
     tx = retro_cats.mint_cats(
         AMOUNT_OF_CATS,
-        {"from": account, "value": retro_cats.s_catfee() * AMOUNT_OF_CATS},
+        {"from": account, "value": retro_cats.s_catFee() * AMOUNT_OF_CATS},
     )
     # print(f"{proxy_retro_cats.s_fee()}")
     tx.wait(1)

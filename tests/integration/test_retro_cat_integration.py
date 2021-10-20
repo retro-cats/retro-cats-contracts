@@ -29,7 +29,7 @@ def test_minting_first_cat_and_waiting():
     tx = fund_with_link(retro_cats.address)
     tx.wait(1)
     assert retro_cats.s_tokenIdToRandomNumber(0) == 0
-    cat_price = retro_cats.s_catfee()
+    cat_price = retro_cats.s_catFee()
     requested_tx = retro_cats.mint_cats({"from": account, "value": cat_price})
     requested_tx.wait(1)
     assert requested_tx.events["requestedNewCat"]["tokenId"] == 0

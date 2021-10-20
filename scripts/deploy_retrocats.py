@@ -15,7 +15,7 @@ def deploy_retro_cats_metadata():
     account = get_account()
     retro_cats_metadata = RetroCatsMetadata.deploy(
         {"from": account},
-        # publish_source=config["networks"][network.show_active()].get("verify", False),
+        publish_source=config["networks"][network.show_active()].get("verify", False),
     )
     print(f"Let's get a value to see if this is working: {retro_cats_metadata.purr()}")
     return retro_cats_metadata
@@ -23,22 +23,23 @@ def deploy_retro_cats_metadata():
 
 def deploy_retro_cats_raffle(retrocats_address):
     account = get_account()
-    retro_cats_metadata = RetroCatsRaffle.deploy(
+    retro_cats_raffle = RetroCatsRaffle.deploy(
         get_contract("vrf_coordinator").address,
         get_contract("link_token").address,
         config["networks"][network.show_active()]["keyhash"],
         config["networks"][network.show_active()]["fee"],
         retrocats_address,
+        config["networks"][network.show_active()]["win_amount"],
         {"from": account},
-        # publish_source=config["networks"][network.show_active()].get("verify", False),
+        publish_source=config["networks"][network.show_active()].get("verify", False),
     )
-    return retro_cats_metadata
+    return retro_cats_raffle
 
 
 def deploy_retro_cats(retro_cats_metadata=None, retro_cats_raffle=None):
     account = get_account()
-    if not retro_cats_metadata and len(RetroCatsMetadata) == 0:
-        deploy_retro_cats_metadata()
+    # if not retro_cats_metadata and len(RetroCatsMetadata) == 0:
+    deploy_retro_cats_metadata()
     retro_cats = RetroCats.deploy(
         get_contract("vrf_coordinator").address,
         get_contract("link_token").address,
@@ -46,12 +47,14 @@ def deploy_retro_cats(retro_cats_metadata=None, retro_cats_raffle=None):
         config["networks"][network.show_active()]["keyhash"],
         config["networks"][network.show_active()]["fee"],
         RetroCatsMetadata[-1].address,
+        config["networks"][network.show_active()]["cat_fee"],
+        config["networks"][network.show_active()]["max_cats_mint"],
         {"from": account},
-        # publish_source=config["networks"][network.show_active()].get("verify", False),
+        publish_source=config["networks"][network.show_active()].get("verify", False),
     )
     print(f"Here is our contract name: {retro_cats.name()}")
-    if not retro_cats_raffle and len(RetroCatsRaffle) == 0:
-        deploy_retro_cats_raffle(retro_cats.address)
+    # if not retro_cats_raffle and len(RetroCatsRaffle) == 0:
+    deploy_retro_cats_raffle(retro_cats.address)
     if network.show_active() == "rinkeby":
         set_base_uri()
         update_front_end()

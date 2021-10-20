@@ -65,13 +65,11 @@ def test_mint_first_cat():
     if network.show_active() not in LOCAL_BLOCKCHAIN_ENVIRONMENTS:
         pytest.skip("Only for local testing")
     # Should call the Chainlink VRF
-    account = (
-        get_account()
-    )  # Remeber, the admin is the proxy contract so we can do this
+    account = get_account()
     retro_cats = deploy_retro_cats()
     tx = fund_with_link(retro_cats)
     tx.wait(1)
-    cat_price = retro_cats.s_catfee()
+    cat_price = retro_cats.s_catFee()
     amount_of_cats = 1
     requested_tx = retro_cats.mint_cats(
         amount_of_cats, {"from": account, "value": cat_price}
@@ -105,7 +103,7 @@ def test_mint_second_cat():
     retro_cats, _ = test_mint_first_cat()
     tx = fund_with_link(retro_cats)
     tx.wait(1)
-    cat_price = retro_cats.s_catfee()
+    cat_price = retro_cats.s_catFee()
     amount_of_cats = 1
     requested_tx = retro_cats.mint_cats(
         amount_of_cats, {"from": account, "value": cat_price}
@@ -123,7 +121,7 @@ def test_mint_many_cats():
     retro_cats, _ = test_mint_first_cat()
     tx = fund_with_link(retro_cats)
     tx.wait(1)
-    cat_price = retro_cats.s_catfee()
+    cat_price = retro_cats.s_catFee()
     with pytest.raises(exceptions.VirtualMachineError):
         # This test too many cats minted at once
         amount_of_cats = 15
@@ -165,9 +163,28 @@ def test_owner_can_withdraw():
     bad_account = get_account(index=1)
     with pytest.raises(exceptions.VirtualMachineError):
         retro_cats.withdraw({"from": bad_account})
-    assert retro_cats.balance() == retro_cats.s_catfee() * 2
+    assert retro_cats.balance() == retro_cats.s_catFee() * 2
     starting_balance = account.balance()
     tx = retro_cats.withdraw({"from": account})
     tx.wait(1)
-    assert account.balance() == starting_balance + retro_cats.s_catfee() * 2
+    assert account.balance() == starting_balance + retro_cats.s_catFee() * 2
     assert retro_cats.balance() == 0
+
+
+def test_max_cat_supply():
+    retro_cats = deploy_retro_cats()
+    account = get_account()
+    tx = fund_with_link(retro_cats, amount=100000000000000000000000)
+    tx.wait(1)
+    mint_cat_amount = 100
+    tx = retro_cats.setMaxCatMint(mint_cat_amount, {"from": account})
+    tx.wait(1)
+    cat_price = retro_cats.s_catFee()
+    max_supply = retro_cats.s_maxCatSupply()
+    for mint_number in range(0, max_supply, mint_cat_amount):
+        tx = retro_cats.mint_cats(
+            mint_cat_amount, {"from": account, "value": cat_price * mint_cat_amount}
+        )
+    tx.wait(1)
+    with pytest.raises(exceptions.VirtualMachineError):
+        retro_cats.mint_cats(1, {"from": account, "value": cat_price})

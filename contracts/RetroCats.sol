@@ -17,7 +17,7 @@
 */
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.3;
+pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -42,6 +42,7 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     address public s_retroCatsMetadata;
     uint256 public s_catFee;
     uint256 public s_maxCatMint;
+    uint256 public s_maxCatSupply;
 
     // Events
     event requestedNewCat(uint256 indexed tokenId, bytes32 requestId);
@@ -75,6 +76,7 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
         s_baseURI = "https://us-central1-retro-cats.cloudfunctions.net/retro-cats-function?token_id=";
         s_catFee = catFee;
         s_maxCatMint = maxCatMint;
+        s_maxCatSupply = 10000; // only 10,000 cats!
     }
 
     //// MINTING ////
@@ -90,6 +92,7 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
         require(s_maxCatMint >= amount, "Max mints exceeded");
         require(amount > 0, "Amount must be > 0");
         require(LINK.balanceOf(address(this)) >= s_fee, "Not enough LINK in contract");
+        require(s_tokenCounter < s_maxCatSupply, "Max supply reached");
         for (uint256 i = 0; i < amount; i++) {
             tokenId = s_tokenCounter;
             _safeMint(msg.sender, tokenId);
@@ -139,7 +142,6 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
      * @dev For if a user wants to immortalize their cat in IPFS
      */
     function setTokenURI(uint256 tokenId, string memory newTokenURI) public onlyOwner {
-        require(_isApprovedOrOwner(_msgSender(), tokenId), "Must be owner or approved");
         _setTokenURI(tokenId, newTokenURI);
     }
 

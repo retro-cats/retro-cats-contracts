@@ -17,7 +17,7 @@
 <<https://github.com/retro-cats/retro-cats-contracts>>
 
 */
-pragma solidity 0.8.3;
+pragma solidity 0.8.7;
 
 /*
  * @title Our contract for describing what a cat looks like.

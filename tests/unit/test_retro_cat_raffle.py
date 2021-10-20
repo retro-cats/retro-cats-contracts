@@ -1,8 +1,5 @@
 from brownie import (
-    config,
     network,
-    exceptions,
-    VRFCoordinatorMock,
     RetroCatsRaffle,
     RetroCats,
 )
@@ -56,7 +53,7 @@ def test_perform_upkeep():
     tx = account.transfer(retro_cats_raffle.address, retro_cats_raffle.s_winAmount())
     tx = fund_with_link(RetroCats[-1])
     mint_cats_tx = RetroCats[-1].mint_cats(
-        1, {"from": account, "value": RetroCats[-1].s_catfee()}
+        1, {"from": account, "value": RetroCats[-1].s_catFee()}
     )
     mind_cat_requestId = mint_cats_tx.events["requestedNewCat"]["requestId"]
     tx = get_contract("vrf_coordinator").callBackWithRandomness(
