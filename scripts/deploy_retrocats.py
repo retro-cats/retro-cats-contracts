@@ -21,14 +21,14 @@ def deploy_retro_cats_metadata():
     return retro_cats_metadata
 
 
-def deploy_retro_cats_raffle(retrocats_address):
+def deploy_retro_cats_raffle():
     account = get_account()
     retro_cats_raffle = RetroCatsRaffle.deploy(
         get_contract("vrf_coordinator").address,
         get_contract("link_token").address,
         config["networks"][network.show_active()]["keyhash"],
         config["networks"][network.show_active()]["fee"],
-        retrocats_address,
+        RetroCats[-1].address,
         config["networks"][network.show_active()]["win_amount"],
         {"from": account},
         publish_source=config["networks"][network.show_active()].get("verify", False),
@@ -38,7 +38,6 @@ def deploy_retro_cats_raffle(retrocats_address):
 
 def deploy_retro_cats(retro_cats_metadata=None, retro_cats_raffle=None):
     account = get_account()
-    # if not retro_cats_metadata and len(RetroCatsMetadata) == 0:
     deploy_retro_cats_metadata()
     retro_cats = RetroCats.deploy(
         get_contract("vrf_coordinator").address,
@@ -53,14 +52,12 @@ def deploy_retro_cats(retro_cats_metadata=None, retro_cats_raffle=None):
         publish_source=config["networks"][network.show_active()].get("verify", False),
     )
     print(f"Here is our contract name: {retro_cats.name()}")
-    # if not retro_cats_raffle and len(RetroCatsRaffle) == 0:
-    deploy_retro_cats_raffle(retro_cats.address)
-    if network.show_active() == "rinkeby":
-        set_base_uri()
-        update_front_end()
+    deploy_retro_cats_raffle()
     return retro_cats
 
 
 def main():
-    deploy_retro_cats_metadata()
     deploy_retro_cats()
+    if network.show_active() == "rinkeby" or network.show_active() == "mainnet":
+        set_base_uri()
+        update_front_end()

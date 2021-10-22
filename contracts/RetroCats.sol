@@ -36,7 +36,7 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     bytes32 internal s_keyHash;
     uint256 public s_fee;
     mapping(bytes32 => uint256) internal s_requestIdToStartingTokenId;
-    mapping(bytes32 => uint256) internal s_requestIdToAmount;
+    mapping(bytes32 => uint256) public s_requestIdToAmount;
     mapping(uint256 => uint256) public s_tokenIdToRandomNumber;
     // Retro Cat Randomness Variables
     address public s_retroCatsMetadata;
@@ -45,7 +45,7 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
     uint256 public s_maxCatSupply;
 
     // Events
-    event requestedNewCat(uint256 indexed tokenId, bytes32 requestId);
+    event requestedNewCat(uint256 indexed tokenId, uint256 indexed amount, bytes32 indexed requestId);
     event randomNumberAssigned(uint256 indexed tokenId, uint256 indexed randomNumber);
 
     /**
@@ -87,21 +87,21 @@ contract RetroCats is Ownable, ERC721URIStorage, VRFConsumerBase, ReentrancyGuar
      * That random number is assigned to a cat as its "dna".
      * This is done in the `fulfillRandomness` function.
      */
-    function mint_cats(uint256 amount) public payable nonReentrant returns (uint256 tokenId) {
+    function mint_cats(uint256 amount) public payable nonReentrant {
         require(msg.value >= s_catFee * amount, "Cat fee not paid");
         require(s_maxCatMint >= amount, "Max mints exceeded");
         require(amount > 0, "Amount must be > 0");
         require(LINK.balanceOf(address(this)) >= s_fee, "Not enough LINK in contract");
         require(s_tokenCounter < s_maxCatSupply, "Max supply reached");
-        for (uint256 i = 0; i < amount; i++) {
-            tokenId = s_tokenCounter;
-            _safeMint(msg.sender, tokenId);
-            bytes32 requestId = requestRandomness(s_keyHash, s_fee);
-            s_requestIdToStartingTokenId[requestId] = tokenId;
-            s_requestIdToAmount[requestId] = amount;
-            emit requestedNewCat(tokenId, requestId);
-            s_tokenCounter = s_tokenCounter + 1;
+        uint256 tokenId = s_tokenCounter;
+        for(uint256 i = tokenId; i < tokenId + amount; i++){
+            _safeMint(msg.sender, i);
         }
+        bytes32 requestId = requestRandomness(s_keyHash, s_fee);
+        s_requestIdToStartingTokenId[requestId] = tokenId;
+        s_requestIdToAmount[requestId] = amount;
+        emit requestedNewCat(tokenId, amount, requestId);
+        s_tokenCounter = s_tokenCounter + amount;
     }
 
     /**

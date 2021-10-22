@@ -134,11 +134,14 @@ def test_mint_many_cats():
     )
     requested_tx.wait(1)
     assert requested_tx.events["requestedNewCat"][0]["tokenId"] == 1
-    assert (
-        requested_tx.events["requestedNewCat"][amount_of_cats - 1]["tokenId"]
+    assert requested_tx.events["requestedNewCat"][0]["amount"] == amount_of_cats
+    assert requested_tx.events["requestedNewCat"][0]["amount"] == amount_of_cats
+    return (
+        retro_cats.s_requestIdToAmount(
+            requested_tx.events["requestedNewCat"][0]["requestId"]
+        )
         == amount_of_cats
     )
-    return retro_cats
 
 
 def test_can_withdraw_link():

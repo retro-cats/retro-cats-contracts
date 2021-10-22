@@ -23,7 +23,6 @@ networks:
     verify: False
   hardhat:
     keyhash: '0x2ed0feb3e7fd2022120aa84fab1945545a9f2ffc9076fd6156fa96eaff4c1311'
-    vrf_call_interval: 15
     fee: 100000000000000000
     cat_fee: 20000000000000000
     max_cats_mint: 10
@@ -31,7 +30,6 @@ networks:
     verify: False
   development:
     keyhash: '0x2ed0feb3e7fd2022120aa84fab1945545a9f2ffc9076fd6156fa96eaff4c1311'
-    vrf_call_interval: 15
     fee: 100000000000000000
     cat_fee: 20000000000000000
     max_cats_mint: 10
@@ -42,12 +40,17 @@ networks:
     link_token: '0x01be23585060835e02b77ef475b0cc51aa1e0709'
     keyhash: '0x2ed0feb3e7fd2022120aa84fab1945545a9f2ffc9076fd6156fa96eaff4c1311'
     fee: 100000000000000000
-    vrf_call_interval: 1
-    oracle: '0x7AFe1118Ea78C1eae84ca8feE5C65Bc76CcF879e'
-    jobId: '6d1bfe27e7034b1d87b5270556b17277'
-    eth_usd_price_feed: '0x8A753747A1Fa494EC906cE90E9f37563A8AF630e'
     cat_fee: 20000000000000000
     max_cats_mint: 10
+    win_amount: 2000000000000000000
+    verify: True
+  mainnet:
+    vrf_coordinator: '0xf0d54349aDdcf704F77AE15b96510dEA15cb7952'
+    link_token: '0x514910771AF9Ca656af840dff83E8264EcF986CA'
+    keyhash: '0xAA77729D3466CA35AE8D28B3BBAC7CC36A5031EFDC430821C02BC31A238AF445'
+    fee: 2000000000000000000
+    cat_fee: 20000000000000000
+    max_cats_mint: 15
     win_amount: 2000000000000000000
     verify: True
 wallets:
